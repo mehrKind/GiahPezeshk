@@ -1,0 +1,7 @@
+login                               Done!
+register --> 
+forget pass                         Done!
+reset pass                          Done!
+profile info  => url : me           Done!
+specialist                          Done!
+
