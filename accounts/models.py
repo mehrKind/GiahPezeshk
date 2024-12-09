@@ -8,13 +8,13 @@ class UserProfile(models.Model):
          ("زن", "زن")
     )
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    profile_img = models.ImageField(upload_to="userProfile/", blank=True, default="userProfile/default.jpg")
+    profile_img = models.ImageField(upload_to="userProfile/", blank=True, default="userProfile/default.png")
     fullName = models.CharField(max_length=255)
     age = models.PositiveIntegerField(blank=True, null=True)    
     phoneNumber = models.CharField(max_length=11, blank=True)
-    email = models.EmailField(max_length=255)
-    country = models.CharField(max_length=255)
-    gender = models.CharField(choices=GENDER_TYPE, max_length=100)
+    email = models.EmailField(max_length=255, blank=True)
+    country = models.CharField(max_length=255, blank=True)
+    gender = models.CharField(choices=GENDER_TYPE, max_length=100, blank=True)
 
     def __str__(self):
         return f"{self.user.username}'s profile"

@@ -4,16 +4,18 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from accounts import serializer, models
-from rest_framework import viewsets
 from random import randint
 from django.conf import settings
 from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import User
+from django.contrib.auth import login
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
+# current profile user
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -32,16 +34,16 @@ class UserProfileView(APIView):
             context = {
                 "status": 404,
                 "data": None,
-                "error": "User profile not found."
+                "error": "User profile not found"
             }
-            return Response(context, status=status.HTTP_404_NOT_FOUND)
+            return Response(context, status=status.HTTP_200_OK)
         except Exception as e:
             context = {
                 "status": 500,
                 "data": None,
                 "error": f"An unexpected error occurred: {str(e)}"
             }
-            return Response(context, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(context, status=status.HTTP_200_OK)
 
 
 # logout user
@@ -50,10 +52,6 @@ class LogoutView(APIView):
 
     def post(self, request):
         try:
-            # Get the token from the request
-            token = request.auth
-            # Delete the token
-            token.delete()
             context = {
                 "status": 202,
                 "data": "Successfully logged out.",
@@ -68,11 +66,75 @@ class LogoutView(APIView):
             }
             return Response(context, status=status.HTTP_200_OK)
 
+# register
 
-# register user
 class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request):
-        pass
+        # Extract user data from the request
+        username_data = request.data.get("username", "")
+        email_data = request.data.get("email", "")
+        password_data = request.data.get("password", "")
+        phone_data = request.data.get("mobile", "")
+        name_data = request.data.get('fullName', "Null")
+
+        try:
+            # Create the user
+            user = User.objects.create_user(
+                username=username_data,
+                email=email_data,  # Save email in User model
+                password=password_data
+            )
+
+            # Create the user profile
+            profile_data = {
+                'user': user.pk,  # Pass the primary key of the user
+                'fullName': name_data,
+                'email': email_data,
+                'phoneNumber': phone_data
+            }
+
+            user_profile_serializer = serializer.RegisterSerializer(data=profile_data)
+
+            if user_profile_serializer.is_valid():
+                user_profile_serializer.save()
+                # Log in the user
+                login(request, user)
+
+                refresh = RefreshToken.for_user(user)
+
+                # Prepare the response context
+                context = {
+                    "status": 201,
+                    "data": {
+                        "access": str(refresh.access_token),  # Access token
+                        "refresh": str(refresh),  # Refresh token
+                        "user": user_profile_serializer.data  # User profile data
+                    },
+                    "error": None
+                }
+
+                return Response(context, status=status.HTTP_201_CREATED)
+            else:
+                # If the profile data is invalid, delete the user
+                user.delete()
+                context = {
+                    "status": 400,
+                    "data": None,
+                    "error": user_profile_serializer.errors
+                }
+                return Response(context, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            # Handle exceptions (e.g., duplicate username)
+            context = {
+                "status": 400,
+                "data": None,
+                "error": str(e)
+            }
+            return Response(context, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 # password recovery and send mail
@@ -275,3 +337,28 @@ class AddSpecialistView(APIView):
             "error": serializer_.errors,
             "success": False
         }, status=status.HTTP_200_OK)
+
+
+# update user
+class UserProfileUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.userprofile
+
+    def put(self, request):
+        user_profile = self.get_object()  # Get the user's profile
+        serializer_ = serializer.UserProfileSerializer(user_profile, data=request.data)
+        if serializer_.is_valid():  # Validate the data
+            serializer_.save()  # Save the updated profile
+            context = {
+                "status": 200,
+                "data": serializer_.data,
+                "error": None
+            }
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# 
+
