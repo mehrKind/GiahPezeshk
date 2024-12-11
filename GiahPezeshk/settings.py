@@ -41,8 +41,11 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework.authtoken',
     'chat',
-    'user'
+    'user',
+    'channels'
 ]
+ASGI_APPLICATION = 'GiahPezeshk.asgi.application'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
