@@ -15,6 +15,7 @@ class UserProfile(models.Model):
     email = models.EmailField(max_length=255, blank=True)
     country = models.CharField(max_length=255, blank=True)
     gender = models.CharField(choices=GENDER_TYPE, max_length=100, blank=True)
+    Expenses = models.BigIntegerField(default=0)
 
     def __str__(self):
         return f"{self.user.username}'s profile"
@@ -28,9 +29,10 @@ class Speciality(models.Model):
 
 
 class Specialist(UserProfile):
-    position = models.CharField(max_length=255)
+    position = models.CharField(max_length=255, default="عضو هیئت علمی دانشگاه جهرم")
     specialties = models.ForeignKey(Speciality, on_delete=models.CASCADE)
-    experience_years = models.PositiveIntegerField()
+    experience_years = models.PositiveIntegerField(blank=True)
+    income = models.BigIntegerField(default=0)
 
     def __str__(self):
         return f"{self.fullName} - {self.position}"
