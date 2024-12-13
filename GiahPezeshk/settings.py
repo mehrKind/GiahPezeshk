@@ -40,9 +40,11 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt',
     'rest_framework.authtoken',
-    'chat',
-    'user'
+    'user',
+    'channels'
 ]
+ASGI_APPLICATION = 'GiahPezeshk.asgi.application'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -154,4 +156,4 @@ SIMPLE_JWT = {
 
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
-
+CSRF_COOKIE_SAMESITE = 'Lax'

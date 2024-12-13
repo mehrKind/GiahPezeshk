@@ -11,8 +11,46 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from django.contrib.auth import login
+from django.contrib.auth import login, authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        # Authenticate the user
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user)  # Log the user in
+            refresh = RefreshToken.for_user(user)
+
+            # Check if the user is an admin (or specialist in your case)
+            is_admin = models.Specialist.objects.filter(user=user).exists()
+
+            # Prepare the response context
+            context = {
+                "status": 200,
+                "data": {
+                    "access": str(refresh.access_token),  # Access token
+                    "refresh": str(refresh),  # Refresh token
+                    "is_admin": is_admin
+                },
+                "error": None
+            }
+            return Response(context, status=status.HTTP_200_OK)
+        else:
+            # User authentication failed
+            context = {
+                "status": 401,
+                "data": None,
+                "error": "Invalid username or password."
+            }
+            return Response(context, status=status.HTTP_200_OK)
 
 
 # current profile user
@@ -68,6 +106,7 @@ class LogoutView(APIView):
 
 # register
 
+
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
@@ -95,7 +134,8 @@ class RegisterView(APIView):
                 'phoneNumber': phone_data
             }
 
-            user_profile_serializer = serializer.RegisterSerializer(data=profile_data)
+            user_profile_serializer = serializer.RegisterSerializer(
+                data=profile_data)
 
             if user_profile_serializer.is_valid():
                 user_profile_serializer.save()
@@ -124,7 +164,7 @@ class RegisterView(APIView):
                     "data": None,
                     "error": user_profile_serializer.errors
                 }
-                return Response(context, status=status.HTTP_400_BAD_REQUEST)
+                return Response(context, status=status.HTTP_200_OK)
 
         except Exception as e:
             # Handle exceptions (e.g., duplicate username)
@@ -133,8 +173,79 @@ class RegisterView(APIView):
                 "data": None,
                 "error": str(e)
             }
-            return Response(context, status=status.HTTP_400_BAD_REQUEST)
+            return Response(context, status=status.HTTP_200_OK)
 
+
+class AdminRegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # Extract user data from the request
+        # username_data = request.data.get("username", "")
+        email_data = request.data.get("email", "")
+        password_data = request.data.get("password", "")
+        phone_data = request.data.get("mobile", "")
+        name_data = request.data.get('fullName', "Null")
+        specialties_data = request.data.get('specialties', "Null")
+
+        try:
+            # Create the user
+            user = User.objects.create_user(
+                username=email_data,
+                email=email_data,  # Save email in User model
+                password=password_data
+            )
+
+            # Create the user profile
+            profile_data = {
+                'user': user.pk,  # Pass the primary key of the user
+                'fullName': name_data,
+                'email': email_data,
+                'phoneNumber': phone_data,
+                "specialties": specialties_data
+
+            }
+
+            user_profile_serializer = serializer.AdminRegisterSerializer(
+                data=profile_data)
+
+            if user_profile_serializer.is_valid():
+                user_profile_serializer.save()
+                # Log in the user
+                login(request, user)
+
+                refresh = RefreshToken.for_user(user)
+
+                # Prepare the response context
+                context = {
+                    "status": 201,
+                    "data": {
+                        "access": str(refresh.access_token),  # Access token
+                        "refresh": str(refresh),  # Refresh token
+                        "user": user_profile_serializer.data  # User profile data
+                    },
+                    "error": None
+                }
+
+                return Response(context, status=status.HTTP_201_CREATED)
+            else:
+                # If the profile data is invalid, delete the user
+                user.delete()
+                context = {
+                    "status": 400,
+                    "data": None,
+                    "error": user_profile_serializer.errors
+                }
+                return Response(context, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            # Handle exceptions (e.g., duplicate username)
+            context = {
+                "status": 400,
+                "data": None,
+                "error": str(e)
+            }
+            return Response(context, status=status.HTTP_200_OK)
 
 
 # password recovery and send mail
@@ -213,8 +324,9 @@ class PasswordRecoveryViewSet(APIView):
             <body>
                 <div class="email-container">
                     <h1 class="welcome-text">به گیاهپزشک خوش آمدید</h1>
-                    <p class="instruction-text">لطفاً این کد را وارد کنید:</p>
+                    <p class="instruction-text">کد فراموشی شما:</p>
                     <h1 class="code">{random_number}</h1>
+                    <p>کلینیک تخصصی و مرکز مشاوره کشاورزی دانشگاه جهرم</p>
                 </div>
             </body>
             </html>
@@ -306,11 +418,14 @@ class AllUserProfilesView(APIView):
         return Response(context, status.HTTP_200_OK)
 
 # view all admins (pecialist)
+
+
 class AllSpecialistView(APIView):
     def get(self, request):
         specialistProfile = models.Specialist.objects.all()
         serializer_ = serializer.SpecialistProfileSerializer(
             specialistProfile, many=True)
+
         context = {
             "status": 200,
             "data": serializer_.data,
@@ -343,12 +458,10 @@ class AddSpecialistView(APIView):
 class UserProfileUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_object(self):
-        return self.request.user.userprofile
-
     def put(self, request):
-        user_profile = self.get_object()  # Get the user's profile
-        serializer_ = serializer.UserProfileSerializer(user_profile, data=request.data)
+        user_profile = models.UserProfile.objects.get(user=request.user)
+        serializer_ = serializer.UserProfileUpdateSerializer(
+            user_profile, data=request.data)
         if serializer_.is_valid():  # Validate the data
             serializer_.save()  # Save the updated profile
             context = {
@@ -356,9 +469,56 @@ class UserProfileUpdateView(APIView):
                 "data": serializer_.data,
                 "error": None
             }
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(context, status=status.HTTP_200_OK)
+        context = {
+            "status": 400,
+            "data": None,
+            "error": serializer_.errors
+        }
+        return Response(context, status=status.HTTP_200_OK)
 
 
-# 
+# update admin
+class SelfAdminUpdateProfile(APIView):
+    def put(self, request):
+        user_profile = models.Specialist.objects.get(user=request.user)
+        serialiser_ = serializer.AdminProfileUpdate(
+            user_profile, data=request.data)
+        if serialiser_.is_valid():
+            serialiser_.save()
+            context = {
+                "status": 200,
+                "data": serialiser_.data,
+                "error": None
+            }
+            return Response(context, status.HTTP_200_OK)
+        else:
+            context = {
+                "status": 404,
+                "data": None,
+                "error": serialiser_.errors
+            }
+            return Response(context, status.HTTP_200_OK)
 
+
+# todo: modir can edit
+class ModirAdminUpdateView(APIView):
+    def put(self, request):
+        pass
+
+
+class UserDeleteView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
+
+    def delete(self, request, user_id):
+        """Delete a user account."""
+        try:
+            if user_id:
+                user = User.objects.get(id=user_id)
+                user.delete()
+                context = {
+                    "status": 204, "message": "User deleted successfully.", "error": None}
+                return Response(context, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            {"status": 404, "data": None, "error": "User not found."}
+            return Response(context, status=status.HTTP_200_OK)
