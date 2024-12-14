@@ -33,7 +33,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class AdminRegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Specialist
-        fields = ['fullName', 'phoneNumber', 'email', 'user', 'specialties']
+        fields = ['fullName', 'phoneNumber', 'email', 'user', 'specialties', 'profile_img']
         
 
 class AdminProfileUpdate(serializers.ModelSerializer):

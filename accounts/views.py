@@ -250,119 +250,163 @@ class AdminRegisterView(APIView):
 
 # password recovery and send mail
 
+from random import randint
+from django.core.mail import send_mail
+from django.conf import settings
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from . import models
+from django.contrib.auth.models import User
+
+
 class PasswordRecoveryViewSet(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
         email = request.data.get('email')
 
+        # Validate email format
         try:
             validate_email(email)
+            if not User.objects.filter(email=email).exists():
+                return Response({
+                    "status": 404,
+                    "data": None,
+                    "error": "Email is not in our database"
+                }, status=status.HTTP_404_NOT_FOUND)
         except ValidationError:
-            return Response({"status": 400, "data": None, "error": "Invalid email format"},
-                            status=status.HTTP_200_OK)
+            return Response({
+                "status": 400,
+                "data": None,
+                "error": "Email is not valid"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
+        # Check if the user exists
         try:
             user = models.UserProfile.objects.get(email=email)
         except models.UserProfile.DoesNotExist:
-            return Response({"status": 200,
-                             "data": "If the email exists, a recovery code has been sent.",
-                             "error": None},
-                            status=status.HTTP_200_OK)
+            # Obfuscate the error for non-existing users
+            return Response({
+                "status": 200,
+                "data": "If the email exists, a recovery code has been sent.",
+                "error": None
+            }, status=status.HTTP_200_OK)
 
+        # Generate a recovery code
         random_number = randint(1000, 9999)
         request.session['random_number'] = random_number
         request.session['email'] = email
+        request.session.save()
 
-        subject = "Reset Password"
-        message = "Your reset code is below."
+        # Prepare email content
+        subject = "Reset Your Password"
+        message = "Your password recovery code is below."
         from_mail = settings.EMAIL_HOST_USER
         to_list = [email]
         html_content = f"""
-            <html>
-            <head>
-                <style>
-                    body {{
-                        font-family: Arial, sans-serif;
-                        background-color: #C7EBDC;
-                        margin: 0;
-                        padding: 0;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                    }}
-                    .email-container {{
-                        width: 80%;
-                        max-width: 400px;
-                        background-color: white;
-                        padding: 20px;
-                        border-radius: 10px;
-                        text-align: center;
-                        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-                    }}
-                    .welcome-text {{
-                        color: #024227;
-                        font-size: 2rem;
-                        margin-bottom: 20px;
-                    }}
-                    .instruction-text {{
-                        font-size: 1.2rem;
-                        margin-bottom: 30px;
-                        color: #024227;
-                    }}
-                    .code {{
-                        background-color: #024227;
-                        color: #fff;
-                        padding: 10px;
-                        border-radius: 20px;
-                        font-size: 2rem;
-                        font-weight: bold;
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class="email-container">
-                    <h1 class="welcome-text">به گیاهپزشک خوش آمدید</h1>
-                    <p class="instruction-text">کد فراموشی شما:</p>
-                    <h1 class="code">{random_number}</h1>
-                    <p>کلینیک تخصصی و مرکز مشاوره کشاورزی دانشگاه جهرم</p>
+        <html>
+        <head>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    background-color: #f5f5f5;
+                    margin: 0;
+                    padding: 0;
+                }}
+                .email-container {{
+                    max-width: 600px;
+                    margin: 30px auto;
+                    background-color: white;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                    overflow: hidden;
+                }}
+                .header {{
+                    background-color: #024227;
+                    color: white;
+                    text-align: center;
+                    padding: 20px;
+                }}
+                .header h1 {{
+                    margin: 0;
+                    font-size: 1.5rem;
+                }}
+                .content {{
+                    padding: 20px;
+                    text-align: center;
+                }}
+                .content p {{
+                    color: #333;
+                    font-size: 1rem;
+                    margin-bottom: 20px;
+                }}
+                .code {{
+                    display: inline-block;
+                    padding: 10px 20px;
+                    font-size: 1.5rem;
+                    color: white;
+                    background-color: #024227;
+                    border-radius: 5px;
+                    font-weight: bold;
+                }}
+                .footer {{
+                    text-align: center;
+                    padding: 10px;
+                    font-size: 0.8rem;
+                    color: #666;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="header">
+                    <h1>Reset Your Password</h1>
                 </div>
-            </body>
-            </html>
+                <div class="content">
+                    <p>Dear User,</p>
+                    <p>Your password recovery code is:</p>
+                    <div class="code">{random_number}</div>
+                    <p>Please use this code to reset your password. This code will expire in 5 minutes.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; 2024 Jahrom University - Agricultural Clinic</p>
+                </div>
+            </div>
+        </body>
+        </html>
         """
 
+        # Send email
         try:
             send_mail(subject, message, from_mail, to_list,
                       fail_silently=False, html_message=html_content)
         except Exception as e:
-            return Response({"status": 500, "data": None, "error": str(e)},
-                            status=status.HTTP_200_OK)
+            return Response({
+                "status": 500,
+                "data": None,
+                "error": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({"status": 200, "data": "Code sent to email", "error": None},
-                        status=status.HTTP_200_OK)
-    # check the sent code is correct or not
+        return Response({
+            "status": 200,
+            "data": "Code sent to email",
+            "error": None
+        }, status=status.HTTP_200_OK)
 
     def put(self, request):
-        # get the 4 digit numbr from request
         digit_number = request.data.get('digit')
-        # check if the given code is correct in the form
+        print(f"Session data: {request.session.items()}")
+
         if 'random_number' in request.session and int(digit_number) == request.session['random_number']:
-            context = {
-                'status': 200,
-                "data": "code is correct",
-                "error": "null"
-            }
-            return Response(context, status=status.HTTP_200_OK)
+            return Response({"status": 200, "data": "code is correct", "error": None},
+                            status=status.HTTP_200_OK)
         else:
-            context = {
-                'status': 404,
-                "data": "null",
-                "error": "Code is incorrect"
-            }
-            return Response(context, status=status.HTTP_200_OK)
-
-
+            return Response({"status": 404, "data": None, "error": "Code is incorrect"},
+                            status=status.HTTP_200_OK)
 # change password
 class ChangePasswordView(APIView):
     permission_classes = [AllowAny]

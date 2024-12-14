@@ -53,7 +53,7 @@
 - **Request Body**:
   ```json
   {
-    "digit": "xxxx",
+    "digit": 0000 (int),
   }
 ### 6. Change Password
 - **URL**: `/api/v1/accounts/change_password/`
@@ -173,7 +173,7 @@
 ### 13. Delete user
 - **URL**: `/api/v1/accounts/delete_user/<int:user_id>/`
 - **Method**: `DELETE`
-- **Description**: For admin to delete a specific user. jsut set the user id in the <> in the url.
+- **Description**: For admin and **FrontEnd Developer** to delete a specific user. jsut set the user id in the <> in the url.
 - **Request Body**:
   ```json
   {
