@@ -3,6 +3,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from pymongo import MongoClient
 from bson import ObjectId
 from django.conf import settings
+import datetime
 
 # MongoDB connection
 client = MongoClient("mongodb://localhost:27017/")
@@ -31,6 +32,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({
                     "username": message["username"],
                     "message": message["message"],
+                    "date_time" : message["date_time"].isoformat()
                 }))
 
     async def disconnect(self, close_code):
@@ -47,7 +49,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Save message to MongoDB
         collection.update_one(
             {"room_name": self.room_name},
-            {"$push": {"messages": {"username": self.username, "message": message}}},
+            {"$push": {"messages": {"username": self.username, "message": message, "date_time": datetime.datetime.now(datetime.timezone.utc)}}},
             upsert=True
         )
 
@@ -58,15 +60,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "type": "chat.message",
                 "message": message,
                 "username": self.username,
+                "date_time": datetime.datetime.now(datetime.timezone.utc)
             }
         )
 
     async def chat_message(self, event):
         message = event["message"]
         username = event["username"]
-
+        date_time = event['date_time'].isoformat()
         # Send message to WebSocket
         await self.send(text_data=json.dumps({
             "username": username,
             "message": message,
+            "date_time": date_time
         }))

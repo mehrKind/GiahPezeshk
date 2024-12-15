@@ -36,7 +36,7 @@
             const chatLog = document.querySelector('#chat-log');
 
             // Append the username and message to the chat log
-            chatLog.value += `${data.username}: ${data.message}\n`;
+            chatLog.value += `${data.username}: ${data.message} ${data.date_time}\n`;
 
             // Scroll to the bottom of the chat log
             chatLog.scrollTop = chatLog.scrollHeight;
