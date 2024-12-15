@@ -8,6 +8,7 @@ api_version = "v1"
 urlpatterns = [
     path('admin/', admin.site.urls),
     path(f"api/{api_version}/accounts/", include("accounts.urls")),
+    path("chat/", include("ChatSocket.urls"))
     # path(f"api/{api_version}/user/", include("user.urls"))
 ]
 

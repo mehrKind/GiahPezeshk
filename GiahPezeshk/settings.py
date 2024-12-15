@@ -28,6 +28,7 @@ ALLOWED_HOSTS = ["*"]
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -40,8 +41,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt',
     'rest_framework.authtoken',
-    'user',
-    'channels'
+    'chat',
+    'user'
 ]
 ASGI_APPLICATION = 'GiahPezeshk.asgi.application'
 
@@ -77,6 +78,7 @@ TEMPLATES = [
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Default
 
 WSGI_APPLICATION = 'GiahPezeshk.wsgi.application'
+ASGI_APPLICATION = "GiahPezeshk.asgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -155,10 +157,6 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=365),
 }
 
-SESSION_COOKIE_SAMESITE = 'Lax'  # Use 'Lax' in development unless absolutely necessary
-SESSION_COOKIE_SECURE = False    # Keep this False in development (HTTP)
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
 
-CSRF_COOKIE_SAMESITE = 'Lax'     # Use 'Lax' for development to work with admin panel
-CSRF_COOKIE_SECURE = False       # Keep this False in development (HTTP)
-
-SESSION_COOKIE_AGE = 300  # 5 minutes

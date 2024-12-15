@@ -2,3 +2,6 @@ djangorestframework-simplejwt
 fastapi
 django
 django-cors-headers
+channels
+daphne
+pymongo
