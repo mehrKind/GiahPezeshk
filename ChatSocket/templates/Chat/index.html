@@ -5,21 +5,47 @@
     <title>Chat Rooms</title>
 </head>
 <body>
-    What chat room would you like to enter?<br>
-    <input id="room-name-input" type="text" size="100"><br>
+    <h1>Enter Chat Room</h1>
+    <label for="username-input">Username:</label><br>
+    <input id="username-input" type="text" size="50" placeholder="Enter your username"><br><br>
+
+    <label for="room-name-input">Room Name:</label><br>
+    <input id="room-name-input" type="text" size="50" placeholder="Enter the room name"><br><br>
+
     <input id="room-name-submit" type="button" value="Enter">
 
     <script>
-        document.querySelector('#room-name-input').focus();
-        document.querySelector('#room-name-input').onkeyup = function(e) {
-            if (e.key === 'Enter') {  // enter, return
-                document.querySelector('#room-name-submit').click();
-            }
-        };
+        // Focus on username input initially
+        document.querySelector('#username-input').focus();
 
-        document.querySelector('#room-name-submit').onclick = function(e) {
-            var roomName = document.querySelector('#room-name-input').value;
-            window.location.pathname = '/chat/' + roomName + '/';
+        // Add event listener for Enter key
+        document.querySelectorAll('#username-input, #room-name-input').forEach(input => {
+            input.onkeyup = function(e) {
+                if (e.key === 'Enter') {  // enter, return
+                    document.querySelector('#room-name-submit').click();
+                }
+            };
+        });
+
+        // Redirect to chat room on button click
+        document.querySelector('#room-name-submit').onclick = function() {
+            var username = document.querySelector('#username-input').value.trim();
+            var roomName = document.querySelector('#room-name-input').value.trim();
+
+            // Validate inputs
+            if (!username) {
+                alert('Please enter a username.');
+                document.querySelector('#username-input').focus();
+                return;
+            }
+            if (!roomName) {
+                alert('Please enter a room name.');
+                document.querySelector('#room-name-input').focus();
+                return;
+            }
+
+            // Construct the URL and navigate
+            window.location.pathname = '/chat/' + roomName + '/' + username + '/';
         };
     </script>
 </body>
