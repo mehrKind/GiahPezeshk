@@ -62,6 +62,8 @@ class UserProfileView(APIView):
         try:
             user_profile = models.UserProfile.objects.get(user=current_user)
             serializer_ = serializer.UserProfileSerializer(user_profile)
+            admin_user = models.Specialist.objects.filter(user=current_user)
+            print(f"admin_user: {admin_user}")
             context = {
                 "status": 200,
                 "data": serializer_.data,
@@ -155,7 +157,7 @@ class RegisterView(APIView):
                     "error": None
                 }
 
-                return Response(context, status=status.HTTP_201_CREATED)
+                return Response(context, status=status.HTTP_200_OK)
             else:
                 # If the profile data is invalid, delete the user
                 user.delete()
@@ -227,7 +229,7 @@ class AdminRegisterView(APIView):
                     "error": None
                 }
 
-                return Response(context, status=status.HTTP_201_CREATED)
+                return Response(context, status=status.HTTP_200_OK)
             else:
                 # If the profile data is invalid, delete the user
                 user.delete()
@@ -247,21 +249,41 @@ class AdminRegisterView(APIView):
             }
             return Response(context, status=status.HTTP_200_OK)
 
+class AdminProfileView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        try:
+            # Retrieve the admin profile associated with the authenticated user
+            admin_profile = models.Specialist.objects.get(user=request.user)
+            admin_profile_serializer = serializer.AdminProfileSerializer(admin_profile)
+
+            context = {
+                "status": 200,
+                "data": admin_profile_serializer.data,
+                "error": None
+            }
+            return Response(context, status=status.HTTP_200_OK)
+
+        except models.Specialist.DoesNotExist:
+            context = {
+                "status": 404,
+                "data": None,
+                "error": "Admin profile not found."
+            }
+            return Response(context, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            context = {
+                "status": 500,
+                "data": None,
+                "error": str(e)
+            }
+            return Response(context, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+        
 # password recovery and send mail
-
-from random import randint
-from django.core.mail import send_mail
-from django.conf import settings
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import AllowAny
-from . import models
-from django.contrib.auth.models import User
-
 
 class PasswordRecoveryViewSet(APIView):
     permission_classes = [AllowAny]
@@ -277,13 +299,13 @@ class PasswordRecoveryViewSet(APIView):
                     "status": 404,
                     "data": None,
                     "error": "Email is not in our database"
-                }, status=status.HTTP_404_NOT_FOUND)
+                }, status=status.HTTP_200_OK)
         except ValidationError:
             return Response({
                 "status": 400,
                 "data": None,
                 "error": "Email is not valid"
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=status.HTTP_200_OK)
 
         # Check if the user exists
         try:
@@ -367,10 +389,10 @@ class PasswordRecoveryViewSet(APIView):
                     <h1>Reset Your Password</h1>
                 </div>
                 <div class="content">
-                    <p>Dear User,</p>
-                    <p>Your password recovery code is:</p>
+                    <p>کاربر عزیز</p>
+                    <p>کد بازیابی رمز عبور شما:</p>
                     <div class="code">{random_number}</div>
-                    <p>Please use this code to reset your password. This code will expire in 5 minutes.</p>
+                    <p>لطفا از این کد برای بازیابی رمز عبور خود استفاده کنید. این کد پس از گذشت 5 دقیقه منقضی خواهد شد.</p>
                 </div>
                 <div class="footer">
                     <p>&copy; 2024 Jahrom University - Agricultural Clinic</p>
@@ -389,7 +411,7 @@ class PasswordRecoveryViewSet(APIView):
                 "status": 500,
                 "data": None,
                 "error": str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            }, status=status.HTTP_200_OK)
 
         return Response({
             "status": 200,
@@ -566,3 +588,50 @@ class UserDeleteView(APIView):
         except User.DoesNotExist:
             {"status": 404, "data": None, "error": "User not found."}
             return Response(context, status=status.HTTP_200_OK)
+
+
+class DeleteAdminListView(APIView):
+    def delete(self, request):
+        user_ids = request.data.get('user_ids', [])
+
+        if not user_ids:
+            return Response({
+                "status": 400,
+                "data": "No user IDs provided.",
+                "error": "user_ids field is required."
+            }, status=status.HTTP_200_OK)
+
+        deleted_users = []
+        not_found_users = []
+
+        for user_id in user_ids:
+            try:
+                user = User.objects.get(id=user_id)
+                user.delete()
+                deleted_users.append(user_id)
+            except User.DoesNotExist:
+                not_found_users.append(user_id)
+
+        if deleted_users:
+            context = {
+                "status": 204,
+                "data": f"Users with IDs {deleted_users} deleted successfully.",
+                "error": None    
+            }
+            return Response(context, status=status.HTTP_204_NO_CONTENT)
+
+        if not_found_users:
+            context = {
+                "status": 404,
+                "data": f"Users with IDs {not_found_users} not found.",
+                "error": None    
+            }
+            return Response(context, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            "status": 400,
+            "data": "No users were deleted.",
+            "error": "No valid user IDs provided."
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
+        

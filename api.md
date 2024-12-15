@@ -114,19 +114,6 @@
       "error": null
   }
 
-### 9. Admin Register User
-- **URL**: `/api/v1/accounts/admin_register/`
-- **Method**: `POST`
-- **Description**: Register (signUp) admin.
-- **Request Body**:
-  ```json
-  {
-    "fullName": "string",
-    "email": "string",
-    "password": "string",
-    "mobile": "string",
-    "specialties": list
-  }
 - **Note**: After registering the user, they will be logged in automatically.
 - **Note**: This api is just for admin (web page not mobile)
 
@@ -178,4 +165,32 @@
   ```json
   {
 
+  }
+### 14. Delete List of users or admins
+- **URL**: `/api/v1/accounts/delete_group/`
+- **Method**: `DELETE`
+- **Description**: get a list of ids to delete them together.
+- **Request Body**:
+  ```json
+  {
+    "user_ids": [0, 0, 0, 0, ...]
+  }
+### 14. Delete List of users or admins
+- **URL**: `/api/v1/accounts/me_admin/`
+- **Method**: `GET`
+- **Description**: get the profile of admin
+- **Response Body**:
+  ```json
+  {
+    "status": 200,
+    "data": {
+      "fullName": "string",
+      "phoneNumber": "string",
+      "email": "string",
+      "profile_img": "/media/userProfile/default.png",
+      "experience_years": int,
+      "income": int,
+      "is_admin": true
+    },
+    "error": null
   }

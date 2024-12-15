@@ -40,3 +40,9 @@ class AdminProfileUpdate(serializers.ModelSerializer):
     class Meta:
         model = models.Specialist
         fields = ['fullName', 'phoneNumber', 'email', 'experience_years', 'profile_img']
+        
+        
+class AdminProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Specialist
+        fields = ['fullName', 'phoneNumber', 'email', 'profile_img', 'experience_years', 'income', 'is_admin']
