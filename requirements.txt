@@ -1,0 +1,4 @@
+djangorestframework-simplejwt
+fastapi
+django
+django-cors-headers
