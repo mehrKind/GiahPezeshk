@@ -65,7 +65,8 @@
             if (message) {
                 chatSocket.send(JSON.stringify({
                     'message': message,
-                    'username': username  // Include the username in the message
+                    'username': username,
+                    'type' :"msg"  // Include the username in the message
                 }));
                 messageInputDom.value = '';
             }
