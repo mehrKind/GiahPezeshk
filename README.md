@@ -1,5 +1,5 @@
 # GiahPezeshk
 
-**Autors**
+**Authors**
 - alireza mehraban
 - amirali rezaie
