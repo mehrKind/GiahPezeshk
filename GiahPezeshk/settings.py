@@ -42,10 +42,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework.authtoken',
     'chat',
-    'user'
+    'user',
+    'ChatSocket'
 ]
-ASGI_APPLICATION = 'GiahPezeshk.asgi.application'
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -75,7 +74,6 @@ TEMPLATES = [
         },
     },
 ]
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Default
 
 WSGI_APPLICATION = 'GiahPezeshk.wsgi.application'
 ASGI_APPLICATION = "GiahPezeshk.asgi.application"
@@ -159,4 +157,10 @@ SIMPLE_JWT = {
 
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 

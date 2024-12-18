@@ -39,7 +39,7 @@ class ProtectedView(APIView):
             }
         )
         # return request
-        return Response(room_id, status=status.HTTP_201_CREATED)
+        return Response(room_id.replace('-',''), status=status.HTTP_201_CREATED)
     
 
 class ChatUsers(APIView):

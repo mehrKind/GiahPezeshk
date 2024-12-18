@@ -1,3 +1,5 @@
 venv
-__pycache__
-requirements.txt
+GiahPezeshk\__pycache__
+ChatSocket\__pycache__
+ChatSocket/migrations/__pycache__
+accounts/__pycache__
