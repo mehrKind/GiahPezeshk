@@ -272,26 +272,20 @@ class AdminRegisterView(APIView):
                 'fullName': name_data,
                 'email': email_data,
                 'phoneNumber': phone_data,
-                "specialties": specialties_data
-
+                "specialties": specialties_data,
+                "is_admin": True
             }
 
             user_profile_serializer = serializer.AdminRegisterSerializer(
                 data=profile_data)
 
             if user_profile_serializer.is_valid():
+
                 user_profile_serializer.save()
-                # Log in the user
-                login(request, user)
-
-                refresh = RefreshToken.for_user(user)
-
                 # Prepare the response context
                 context = {
                     "status": 201,
                     "data": {
-                        "access": str(refresh.access_token),  # Access token
-                        "refresh": str(refresh),  # Refresh token
                         "user": user_profile_serializer.data  # User profile data
                     },
                     "error": None
@@ -566,26 +560,6 @@ class AllSpecialistView(APIView):
             "error": None
         }
         return Response(context, status.HTTP_200_OK)
-
-
-# add admin (pecialist)
-class AddSpecialistView(APIView):
-    def post(self, request):
-        serializer_ = serializer.SpecialistProfileSerializer(data=request.data)
-        if serializer_.is_valid():
-            serializer_.save()
-            return Response({
-                "status": 201,
-                "data": serializer_.data,
-                "error": None,
-                "success": True
-            }, status=status.HTTP_200_OK)
-        return Response({
-            "status": 400,
-            "data": None,
-            "error": serializer_.errors,
-            "success": False
-        }, status=status.HTTP_200_OK)
 
 
 # update user
