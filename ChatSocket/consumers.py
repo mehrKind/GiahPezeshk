@@ -18,6 +18,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not self.room_name or not self.username:
             await self.close()
             return
+        
+        chat_history = collection.find_one({"room_name": self.room_name}) 
+        if chat_history == None:
+            await self.close()
+            return
+        else:
+            if not (self.username in chat_history['room_users']):
+                await self.close()
+                return
 
         self.room_group_name = f"chat_{self.room_name}"
 
@@ -26,7 +35,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         # Load chat history from MongoDB
-        chat_history = collection.find_one({"room_name": self.room_name})
+        
         if chat_history and "messages" in chat_history:
             for message in chat_history["messages"]:
                 await self.send(text_data=json.dumps({
@@ -42,6 +51,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         message = text_data_json.get("message")
+        type = text_data_json.get("type")
 
         if not message:
             return
@@ -49,7 +59,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Save message to MongoDB
         collection.update_one(
             {"room_name": self.room_name},
-            {"$push": {"messages": {"username": self.username, "message": message, "date_time": datetime.datetime.now(datetime.timezone.utc)}}},
+            {"$push": {"messages": {"type":type,"username": self.username, "message": message, "date_time": datetime.datetime.now(datetime.timezone.utc)}}},
             upsert=True
         )
 
