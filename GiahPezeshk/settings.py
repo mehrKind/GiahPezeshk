@@ -81,21 +81,10 @@ WSGI_APPLICATION = 'GiahPezeshk.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
-        'ENGINE': 'djongo',
-        'NAME': 'plant',  # The name of your MongoDB database
-        'ENFORCE_SCHEMA': False,
-        'CLIENT': {
-            'host': 'mongodb://127.0.0.1:27017/plant',  # Connection string to your MongoDB database
-        }
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

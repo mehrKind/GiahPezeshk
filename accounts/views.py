@@ -177,6 +177,74 @@ class RegisterView(APIView):
             }
             return Response(context, status=status.HTTP_200_OK)
 
+class UserRegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # Extract user data from the request
+        username_data = request.data.get("username", "")
+        email_data = request.data.get("email", "")
+        password_data = request.data.get("password", "")
+        phone_data = request.data.get("mobile", "")
+        name_data = request.data.get('fullName', "Null")
+
+        try:
+            # Create the user
+            user = User.objects.create_user(
+                username=username_data,
+                email=email_data,  # Save email in User model
+                password=password_data
+            )
+
+            # Create the user profile
+            profile_data = {
+                'user': user.pk,  # Pass the primary key of the user
+                'fullName': name_data,
+                'email': email_data,
+                'phoneNumber': phone_data
+            }
+
+            user_profile_serializer = serializer.RegisterSerializer(
+                data=profile_data)
+
+            if user_profile_serializer.is_valid():
+                user_profile_serializer.save()
+                # Log in the user
+                # login(request, user)
+
+                # refresh = RefreshToken.for_user(user)
+
+                # Prepare the response context
+                context = {
+                    "status": 201,
+                    "data": {
+                        # "access": str(refresh.access_token),  # Access token
+                        # "refresh": str(refresh),  # Refresh token
+                        "user": user_profile_serializer.data  # User profile data
+                    },
+                    "error": None
+                }
+
+                return Response(context, status=status.HTTP_200_OK)
+            else:
+                # If the profile data is invalid, delete the user
+                user.delete()
+                context = {
+                    "status": 400,
+                    "data": None,
+                    "error": user_profile_serializer.errors
+                }
+                return Response(context, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            # Handle exceptions (e.g., duplicate username)
+            context = {
+                "status": 400,
+                "data": None,
+                "error": str(e)
+            }
+            return Response(context, status=status.HTTP_200_OK)
+
 
 class AdminRegisterView(APIView):
     permission_classes = [AllowAny]
