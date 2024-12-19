@@ -16,8 +16,9 @@ urlpatterns = [
     path("all_specialist/", views.AllSpecialistView.as_view()),
     path("add_specialist/", views.AdminRegisterView.as_view()),
     path("me_update_admin/", views.SelfAdminUpdateProfile.as_view()),
-    path("me_update", views.UserProfileUpdateView.as_view()),
+    path("me_update/", views.UserProfileUpdateView.as_view()),
     path("register/", views.RegisterView.as_view()),
+    path("register_user", views.UserRegisterView.as_view()),
     path('delete_user/<int:user_id>/', views.UserDeleteView.as_view(),),
     path('delete_group/', views.DeleteAdminListView.as_view(), name="delete_group_user_admin"),
     path("logout/", views.LogoutView.as_view(), name="logout")
