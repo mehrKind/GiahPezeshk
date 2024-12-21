@@ -54,16 +54,17 @@ class LoginView(APIView):
 
 
 # current profile user
+# todo: ===================================== update
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         current_user = request.user
         try:
-            user_profile = models.UserProfile.objects.get(user=current_user)
+            user_profile = models.UserProfile.objects.filter(is_admin = False).get(user = current_user)
             serializer_ = serializer.UserProfileSerializer(user_profile)
-            admin_user = models.Specialist.objects.filter(user=current_user)
-            print(f"admin_user: {admin_user}")
+            # admin_user = models.Specialist.objects.filter(user=current_user)
+            # print(f"admin_user: {admin_user}")
             context = {
                 "status": 200,
                 "data": serializer_.data,
