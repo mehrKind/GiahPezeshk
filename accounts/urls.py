@@ -17,6 +17,7 @@ urlpatterns = [
     path("add_specialist/", views.AdminRegisterView.as_view()),
     path("me_update_admin/", views.SelfAdminUpdateProfile.as_view()),
     path("me_update/", views.UserProfileUpdateView.as_view()),
+    path("me_update_form/", views.UserProfileUpdateViewFrom.as_view()),
     path("register/", views.RegisterView.as_view()),
     path("register_user", views.UserRegisterView.as_view()),
     path('delete_user/<int:user_id>/', views.UserDeleteView.as_view(),),

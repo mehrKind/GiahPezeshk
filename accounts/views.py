@@ -54,7 +54,6 @@ class LoginView(APIView):
 
 
 # current profile user
-# todo: ===================================== update
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -570,6 +569,29 @@ class UserProfileUpdateView(APIView):
     def put(self, request):
         user_profile = models.UserProfile.objects.get(user=request.user)
         serializer_ = serializer.UserProfileUpdateSerializer(
+            user_profile, data=request.data)
+        if serializer_.is_valid():  # Validate the data
+            serializer_.save()  # Save the updated profile
+            context = {
+                "status": 200,
+                "data": serializer_.data,
+                "error": None
+            }
+            return Response(context, status=status.HTTP_200_OK)
+        context = {
+            "status": 400,
+            "data": None,
+            "error": serializer_.errors
+        }
+        return Response(context, status=status.HTTP_200_OK)
+    
+    
+class UserProfileUpdateViewFrom(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user_profile = models.UserProfile.objects.get(user=request.user)
+        serializer_ = serializer.userprofileUpdateFromSerializer(
             user_profile, data=request.data)
         if serializer_.is_valid():  # Validate the data
             serializer_.save()  # Save the updated profile

@@ -71,3 +71,12 @@ class AdminProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Specialist
         fields = ['fullName', 'phoneNumber', 'email', 'profile_img', 'experience_years', 'income', 'is_admin']
+        
+        
+
+class userprofileUpdateFromSerializer(serializers.ModelSerializer):
+    fullName = serializers.CharField(required=False)
+    class Meta:
+        model = models.UserProfile
+        fields = ['fullName', 'gender', 'email', 'profile_img']
+        
