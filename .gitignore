@@ -1,5 +1,10 @@
+__pycache__/
 venv
-GiahPezeshk\__pycache__
-ChatSocket\__pycache__
+GiahPezeshk/__pycache__
+ChatSocket/__pycache__
 ChatSocket/migrations/__pycache__
 accounts/__pycache__
+chat/__pycache__
+GiahPezeshk/__pycache__
+/user/__pycache__
+accounts/__pycache__/models.cpython-311.pyc
