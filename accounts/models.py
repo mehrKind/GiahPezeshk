@@ -44,7 +44,7 @@ class Speciality(models.Model):
 class Specialist(UserProfile):
     position = models.CharField(max_length=255, default="عضو هیئت علمی دانشگاه جهرم")
     specialties = models.ForeignKey(Speciality, on_delete=models.CASCADE)
-    experience_years = models.PositiveIntegerField(blank=True)
+    experience_years = models.PositiveIntegerField(blank=True, null=True)
     income = models.BigIntegerField(default=0)
 
     def __str__(self):
