@@ -42,9 +42,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework.authtoken',
     'chat',
-    'chat',
     'user',
-    'ChatSocket'
     'ChatSocket'
 ]
 MIDDLEWARE = [
