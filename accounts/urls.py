@@ -9,6 +9,7 @@ from . import views
 urlpatterns = [
     path('login/', views.LoginView.as_view()),
     path("me/", views.UserProfileView.as_view()),
+    path("me_single/", views.singleUserView.as_view()),
     path("me_admin/", views.AdminProfileView.as_view()),
     path("password_recovery/", views.PasswordRecoveryViewSet.as_view()),
     path("change_password/", views.ChangePasswordView.as_view()),
@@ -17,6 +18,7 @@ urlpatterns = [
     path("add_specialist/", views.AdminRegisterView.as_view()),
     path("me_update_admin/", views.SelfAdminUpdateProfile.as_view()),
     path("me_update/", views.UserProfileUpdateView.as_view()),
+    path("me_update_form/", views.UserProfileUpdateViewFrom.as_view()),
     path("register/", views.RegisterView.as_view()),
     path("register_user", views.UserRegisterView.as_view()),
     path('delete_user/<int:user_id>/', views.UserDeleteView.as_view(),),

@@ -60,10 +60,10 @@ class UserProfileView(APIView):
     def get(self, request):
         current_user = request.user
         try:
-            user_profile = models.UserProfile.objects.get(user=current_user)
+            user_profile = models.UserProfile.objects.filter(is_admin = False).get(user = current_user)
             serializer_ = serializer.UserProfileSerializer(user_profile)
-            admin_user = models.Specialist.objects.filter(user=current_user)
-            print(f"admin_user: {admin_user}")
+            # admin_user = models.Specialist.objects.filter(user=current_user)
+            # print(f"admin_user: {admin_user}")
             context = {
                 "status": 200,
                 "data": serializer_.data,
@@ -534,7 +534,7 @@ class ChangePasswordView(APIView):
 # all users
 class AllUserProfilesView(APIView):
     def get(self, request):
-        usersProfile = models.UserProfile.objects.all()
+        usersProfile = models.UserProfile.objects.filter(is_admin = False).all().order_by("-timestamp")
         serializer_ = serializer.UserProfileSerializer(usersProfile, many=True)
 
         context = {
@@ -569,6 +569,29 @@ class UserProfileUpdateView(APIView):
     def put(self, request):
         user_profile = models.UserProfile.objects.get(user=request.user)
         serializer_ = serializer.UserProfileUpdateSerializer(
+            user_profile, data=request.data)
+        if serializer_.is_valid():  # Validate the data
+            serializer_.save()  # Save the updated profile
+            context = {
+                "status": 200,
+                "data": serializer_.data,
+                "error": None
+            }
+            return Response(context, status=status.HTTP_200_OK)
+        context = {
+            "status": 400,
+            "data": None,
+            "error": serializer_.errors
+        }
+        return Response(context, status=status.HTTP_200_OK)
+    
+    
+class UserProfileUpdateViewFrom(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user_profile = models.UserProfile.objects.get(user=request.user)
+        serializer_ = serializer.userprofileUpdateFromSerializer(
             user_profile, data=request.data)
         if serializer_.is_valid():  # Validate the data
             serializer_.save()  # Save the updated profile
@@ -677,3 +700,32 @@ class DeleteAdminListView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
         
         
+
+class singleUserView(APIView):
+    # permission_classes = [AllowAny]
+    def get(self, request):
+        email = request.query_params.get("email")
+        phone_number = request.query_params.get("phoneNumber")
+        user_profiles = models.UserProfile.objects.none()
+        if email:
+            user_profiles = models.UserProfile.objects.filter(email=email)
+        elif phone_number:
+            user_profiles = models.UserProfile.objects.filter(phoneNumber=phone_number)
+            
+        if not user_profiles.exists():
+            return Response({
+                "status": 404,
+                "data": None,
+                "error": "User not found"
+            }, status.HTTP_404_NOT_FOUND)
+            
+        userProfileSerialiser = serializer.UserProfileSerializer(user_profiles, many=True)
+        
+        context = {
+            "status": 200,
+            "data": userProfileSerialiser.data,
+            "error": None
+        }
+        
+        return Response(context, status.HTTP_200_OK)
+    
