@@ -534,7 +534,7 @@ class ChangePasswordView(APIView):
 # all users
 class AllUserProfilesView(APIView):
     def get(self, request):
-        usersProfile = models.UserProfile.objects.all()
+        usersProfile = models.UserProfile.objects.filter(is_admin = False).all().order_by("-timestamp")
         serializer_ = serializer.UserProfileSerializer(usersProfile, many=True)
 
         context = {
@@ -700,3 +700,32 @@ class DeleteAdminListView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
         
         
+
+class singleUserView(APIView):
+    # permission_classes = [AllowAny]
+    def get(self, request):
+        email = request.query_params.get("email")
+        phone_number = request.query_params.get("phoneNumber")
+        user_profiles = models.UserProfile.objects.none()
+        if email:
+            user_profiles = models.UserProfile.objects.filter(email=email)
+        elif phone_number:
+            user_profiles = models.UserProfile.objects.filter(phoneNumber=phone_number)
+            
+        if not user_profiles.exists():
+            return Response({
+                "status": 404,
+                "data": None,
+                "error": "User not found"
+            }, status.HTTP_404_NOT_FOUND)
+            
+        userProfileSerialiser = serializer.UserProfileSerializer(user_profiles, many=True)
+        
+        context = {
+            "status": 200,
+            "data": userProfileSerialiser.data,
+            "error": None
+        }
+        
+        return Response(context, status.HTTP_200_OK)
+    

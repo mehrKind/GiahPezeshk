@@ -19,6 +19,7 @@ class UserProfile(models.Model):
     gender = models.CharField(choices=GENDER_TYPE, max_length=100, blank=True)
     Expenses = models.BigIntegerField(default=0)
     is_admin = models.BooleanField(default=False)
+    # date_added = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 
     def __str__(self):
         return f"{self.user.username}'s profile"
