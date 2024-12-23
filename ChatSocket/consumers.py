@@ -39,6 +39,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if chat_history and "messages" in chat_history:
             for message in chat_history["messages"]:
                 await self.send(text_data=json.dumps({
+                    "msg_type" : message["type"],
                     "username": message["username"],
                     "message": message["message"],
                     "date_time" : message["date_time"].isoformat()
@@ -51,36 +52,46 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         message = text_data_json.get("message")
-        type = text_data_json.get("type")
-
+        msg_type = text_data_json.get("msg_type")
         if not message:
             return
+        
 
         # Save message to MongoDB
         collection.update_one(
             {"room_name": self.room_name},
-            {"$push": {"messages": {"type":type,"username": self.username, "message": message, "date_time": datetime.datetime.now(datetime.timezone.utc)}}},
+            {"$push": {"messages": {"type":msg_type,"username": self.username, "message": message, "date_time": datetime.datetime.now(datetime.timezone.utc)}}},
             upsert=True
         )
 
+
+        
         # Broadcast the message to the group
         await self.channel_layer.group_send(
             self.room_group_name,
             {
-                "type": "chat.message",
+                "type": "chat_message",
+                "msg_type": msg_type,
                 "message": message,
                 "username": self.username,
                 "date_time": datetime.datetime.now(datetime.timezone.utc)
             }
         )
 
+
+        
+
+
     async def chat_message(self, event):
+        print(event)
         message = event["message"]
+        msg_type = event["msg_type"]
         username = event["username"]
         date_time = event['date_time'].isoformat()
         # Send message to WebSocket
         await self.send(text_data=json.dumps({
             "username": username,
+            "msg_type": msg_type,
             "message": message,
             "date_time": date_time
         }))

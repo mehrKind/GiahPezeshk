@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated ,AllowAny
 import json
 
+
 client = MongoClient("mongodb://localhost:27017/")
 db = client["chat_app"]  # Database name
 collection = db["room"]
@@ -46,8 +47,11 @@ class ChatUsers(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request,username):
-        chats = collection.find({"room_users": username},{'messages': 0,'_id': 0}) 
-        return Response(list(chats), status=status.HTTP_200_OK)
+        chats = collection.find({"room_users": username},{'messages': 0,'_id': 0})
+        chats = list(chats)
+        for chat in chats:
+            chat['room_users'].remove(username)
+        return Response(chats, status=status.HTTP_200_OK)
     
 
 class ChangeAdmin(APIView):
