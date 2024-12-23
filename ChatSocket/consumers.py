@@ -39,7 +39,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if chat_history and "messages" in chat_history:
             for message in chat_history["messages"]:
                 await self.send(text_data=json.dumps({
-                    "msg_type" : message["type"],
+                    "msg_type" : message["msg_type"],
                     "username": message["username"],
                     "message": message["message"],
                     "date_time" : message["date_time"].isoformat()
@@ -60,7 +60,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Save message to MongoDB
         collection.update_one(
             {"room_name": self.room_name},
-            {"$push": {"messages": {"type":msg_type,"username": self.username, "message": message, "date_time": datetime.datetime.now(datetime.timezone.utc)}}},
+            {"$push": {"messages": {"msg_type":msg_type,"username": self.username, "message": message, "date_time": datetime.datetime.now(datetime.timezone.utc)}}},
             upsert=True
         )
 
@@ -83,7 +83,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 
     async def chat_message(self, event):
-        print(event)
         message = event["message"]
         msg_type = event["msg_type"]
         username = event["username"]

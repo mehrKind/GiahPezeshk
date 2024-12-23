@@ -47,7 +47,11 @@ class ChatUsers(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request,username):
-        chats = collection.find({"room_users": username},{'messages': 0,'_id': 0})
+        # chats = collection.find({"room_users": username},{'messages': 0,'_id': 0})
+        chats = collection.find(
+            {"room_users": username},  # Query filter
+            {"messages": {"$slice": -1}, "_id": 0, "room_users": 1,"room_name":1}  # Projection
+        )
         chats = list(chats)
         for chat in chats:
             chat['room_users'].remove(username)
@@ -59,18 +63,15 @@ class ChangeAdmin(APIView):
 
     def post(self, request):
         data = json.loads(request.body)
-        print(data)
         room_name = data.get("room_name")
         user_to_change = data.get("user_to_change")
         new_user = data.get("new_user")
-        print("okay1")
         filter_query = {"room_name":room_name,"room_users" : user_to_change}
         update_operation = {
             "$set":{
                 "room_users.$":new_user
             }
         }
-        print("okay2")
         result = collection.update_one(filter_query,update_operation)
         if result.modified_count == 1:
             return Response("ok", status=status.HTTP_202_ACCEPTED)
