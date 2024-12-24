@@ -701,31 +701,36 @@ class DeleteAdminListView(APIView):
         
         
 
-class singleUserView(APIView):
-    # permission_classes = [AllowAny]
-    def get(self, request):
-        email = request.query_params.get("email")
-        phone_number = request.query_params.get("phoneNumber")
-        user_profiles = models.UserProfile.objects.none()
-        if email:
-            user_profiles = models.UserProfile.objects.filter(email=email)
-        elif phone_number:
-            user_profiles = models.UserProfile.objects.filter(phoneNumber=phone_number)
-            
-        if not user_profiles.exists():
+class SingleUserView(APIView):    
+    def post(self, request):
+        # Get email and phone_number from request data
+        emails = request.data.get("email", [])  # Expecting a list
+        phone_numbers = request.data.get("phoneNumber", [])  # Expecting a list
+        
+        userProfile = None
+        
+        # Initialize a queryset
+        if emails:
+            userProfile = models.UserProfile.objects.all().filter(email__in=emails)
+        elif phone_numbers:
+            userProfile = models.UserProfile.objects.all().filter(phoneNumber__in=phone_numbers)
+        
+        # If no userProfile found, return a 404 response
+        if userProfile is None or not userProfile.exists():
             return Response({
                 "status": 404,
                 "data": None,
                 "error": "User not found"
-            }, status.HTTP_404_NOT_FOUND)
-            
-        userProfileSerialiser = serializer.UserProfileSerializer(user_profiles, many=True)
+            }, status=status.HTTP_200_OK)
+
+        # Serialize the user profile data
+        userProfileSerializer = serializer.UserProfileSerializer(userProfile, many=True)
         
+        # Return the user profile data
         context = {
             "status": 200,
-            "data": userProfileSerialiser.data,
+            "data": userProfileSerializer.data,
             "error": None
         }
         
-        return Response(context, status.HTTP_200_OK)
-    
+        return Response(context, status=status.HTTP_200_OK)
