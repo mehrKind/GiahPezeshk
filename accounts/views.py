@@ -13,6 +13,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.contrib.auth import login, authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class LoginView(APIView):
@@ -29,28 +30,42 @@ class LoginView(APIView):
             login(request, user)  # Log the user in
             refresh = RefreshToken.for_user(user)
 
-            # Check if the user is an admin (or specialist in your case)
-            is_admin = models.Specialist.objects.filter(user=user).exists()
+            # Fetch the user profile (UserProfile or Specialist)
+            try:
+                if models.Specialist.objects.filter(user=user).exists():
+                    user_profile = models.Specialist.objects.get(user=user)
+                else:
+                    user_profile = models.UserProfile.objects.get(user=user)
 
-            # Prepare the response context
-            context = {
-                "status": 200,
-                "data": {
-                    "access": str(refresh.access_token),  # Access token
-                    "refresh": str(refresh),  # Refresh token
-                    "is_admin": is_admin
-                },
-                "error": None
-            }
-            return Response(context, status=status.HTTP_200_OK)
+                # Prepare the response context
+                context = {
+                    "status": 200,
+                    "data": {
+                        "access": str(refresh.access_token),  # Access token
+                        "refresh": str(refresh),  # Refresh token
+                        "is_admin": user_profile.is_admin,
+                        "is_modir": user_profile.is_modir,
+                    },
+                    "error": None,
+                }
+                return Response(context, status=status.HTTP_200_OK)
+            except models.UserProfile.DoesNotExist:
+                # Handle case where UserProfile doesn't exist
+                context = {
+                    "status": 500,
+                    "data": None,
+                    "error": "User profile not found.",
+                }
+                return Response(context, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             # User authentication failed
             context = {
                 "status": 401,
                 "data": None,
-                "error": "Invalid username or password."
+                "error": "Invalid username or password.",
             }
-            return Response(context, status=status.HTTP_200_OK)
+            return Response(context, status=status.HTTP_401_UNAUTHORIZED)
+
 
 
 # current profile user
@@ -177,112 +192,107 @@ class RegisterView(APIView):
             }
             return Response(context, status=status.HTTP_200_OK)
 
+
+# ! ========================================
 class UserRegisterView(APIView):
     permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
-        # Extract user data from the request
-        username_data = request.data.get("username", "")
         email_data = request.data.get("email", "")
         password_data = request.data.get("password", "")
         phone_data = request.data.get("mobile", "")
         name_data = request.data.get('fullName', "Null")
-
-        try:
-            # Create the user
-            user = User.objects.create_user(
-                username=username_data,
-                email=email_data,  # Save email in User model
-                password=password_data
-            )
-
-            # Create the user profile
-            profile_data = {
-                'user': user.pk,  # Pass the primary key of the user
-                'fullName': name_data,
-                'email': email_data,
-                'phoneNumber': phone_data
-            }
-
-            user_profile_serializer = serializer.RegisterSerializer(
-                data=profile_data)
-
-            if user_profile_serializer.is_valid():
-                user_profile_serializer.save()
-                # Log in the user
-                # login(request, user)
-
-                # refresh = RefreshToken.for_user(user)
-
-                # Prepare the response context
-                context = {
-                    "status": 201,
-                    "data": {
-                        # "access": str(refresh.access_token),  # Access token
-                        # "refresh": str(refresh),  # Refresh token
-                        "user": user_profile_serializer.data  # User profile data
-                    },
-                    "error": None
-                }
-
-                return Response(context, status=status.HTTP_200_OK)
-            else:
-                # If the profile data is invalid, delete the user
-                user.delete()
-                context = {
-                    "status": 400,
-                    "data": None,
-                    "error": user_profile_serializer.errors
-                }
-                return Response(context, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            # Handle exceptions (e.g., duplicate username)
-            context = {
-                "status": 400,
-                "data": None,
-                "error": str(e)
-            }
-            return Response(context, status=status.HTTP_200_OK)
-
-
-class AdminRegisterView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        # Extract user data from the request
-        # username_data = request.data.get("username", "")
-        email_data = request.data.get("email", "")
-        password_data = request.data.get("password", "")
-        phone_data = request.data.get("mobile", "")
-        name_data = request.data.get('fullName', "Null")
-        specialties_data = request.data.get('specialties', "Null")
+        profile_img_data = request.FILES.get("profile_img", None)  # Get profile_img if provided
 
         try:
             # Create the user
             user = User.objects.create_user(
                 username=email_data,
-                email=email_data,  # Save email in User model
+                email=email_data,
                 password=password_data
             )
 
-            # Create the user profile
+            # Prepare the profile data
             profile_data = {
-                'user': user.pk,  # Pass the primary key of the user
+                'user': user.pk,
+                'fullName': name_data,
+                'email': email_data,
+                'phoneNumber': phone_data,
+                'profile_img': profile_img_data  # Include profile_img if provided
+            }
+
+            user_profile_serializer = serializer.RegisterSerializer(data=profile_data)
+
+            if user_profile_serializer.is_valid():
+                user_profile_serializer.save()
+                context = {
+                    "status": 201,
+                    "data": {
+                        "user": user_profile_serializer.data
+                    },
+                    "error": None
+                }
+                return Response(context, status=status.HTTP_200_OK)
+            else:
+                user.delete()  # Delete the user if profile data is invalid
+                context = {
+                    "status": 400,
+                    "data": None,
+                    "error": user_profile_serializer.errors
+                }
+                return Response(context, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            context = {
+                "status": 400,
+                "data": None,
+                "error": str(e)
+            }
+            return Response(context, status=status.HTTP_200_OK)
+
+# ! ========================================
+
+
+class AdminRegisterView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]  # Allow handling of form-data requests
+
+    def post(self, request):
+        # Extract user data from the request (including file)
+        email_data = request.data.get("email", "")
+        password_data = request.data.get("password", "")
+        phone_data = request.data.get("mobile", "")
+        name_data = request.data.get("fullName", "Null")
+        specialties_data = request.data.get("specialties", "Null")
+        profile_img_data = request.FILES.get("profile_img")
+
+        try:
+            # Create the user
+            user = User.objects.create_user(
+                username=email_data,
+                email=email_data,
+                password=password_data
+            )
+
+            # Create the user profile data
+            profile_data = {
+                'user': user.pk,
                 'fullName': name_data,
                 'email': email_data,
                 'phoneNumber': phone_data,
                 "specialties": specialties_data,
-                "is_admin": True
+                "is_admin": True,
+                "profile_img": profile_img_data
             }
 
-            user_profile_serializer = serializer.AdminRegisterSerializer(
-                data=profile_data)
+            # Serialize and validate the profile data
+            user_profile_serializer = serializer.AdminRegisterSerializer(data=profile_data)
 
             if user_profile_serializer.is_valid():
-
+                user_profile_serializer.is_admin = True
                 user_profile_serializer.save()
-                # Prepare the response context
+                # Return success response with user profile data
                 context = {
                     "status": 201,
                     "data": {
@@ -290,10 +300,9 @@ class AdminRegisterView(APIView):
                     },
                     "error": None
                 }
-
                 return Response(context, status=status.HTTP_200_OK)
             else:
-                # If the profile data is invalid, delete the user
+                # If the profile data is invalid, delete the user and return the error
                 user.delete()
                 context = {
                     "status": 400,
@@ -303,13 +312,14 @@ class AdminRegisterView(APIView):
                 return Response(context, status=status.HTTP_200_OK)
 
         except Exception as e:
-            # Handle exceptions (e.g., duplicate username)
+            # Handle any unexpected exceptions
             context = {
                 "status": 400,
                 "data": None,
                 "error": str(e)
             }
             return Response(context, status=status.HTTP_200_OK)
+
 
 class AdminProfileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -534,7 +544,7 @@ class ChangePasswordView(APIView):
 # all users
 class AllUserProfilesView(APIView):
     def get(self, request):
-        usersProfile = models.UserProfile.objects.filter(is_admin = False).all().order_by("-timestamp")
+        usersProfile = models.UserProfile.objects.filter(is_admin = False).all()
         serializer_ = serializer.UserProfileSerializer(usersProfile, many=True)
 
         context = {
@@ -550,16 +560,38 @@ class AllUserProfilesView(APIView):
 
 class AllSpecialistView(APIView):
     def get(self, request):
-        specialistProfile = models.Specialist.objects.all()
-        serializer_ = serializer.SpecialistProfileSerializer(
-            specialistProfile, many=True)
+        current_user = request.user
 
+        try:
+            # Fetch the Specialist instance for the current user
+            current_user_profile = models.Specialist.objects.get(user=current_user)
+        except models.Specialist.DoesNotExist:
+            context = {
+                "status": 403,
+                "data": None,
+                "error": "Access denied. User does not have a specialist profile."
+            }
+            return Response(context, status=status.HTTP_403_FORBIDDEN)
+
+        # Check if the current user is a "modir"
+        if current_user_profile.is_modir:
+            # If the user is a "modir", retrieve all specialists with is_admin=True
+            specialist_profiles = models.Specialist.objects.filter(is_admin=True)
+        else:
+            # Otherwise, only return the current user's specialist profile
+            specialist_profiles = models.Specialist.objects.filter(user=current_user)
+
+        # Serialize the data
+        serializer_ = serializer.SpecialistProfileSerializer(specialist_profiles, many=True)
+
+        # Prepare the response context
         context = {
             "status": 200,
             "data": serializer_.data,
             "error": None
         }
-        return Response(context, status.HTTP_200_OK)
+        return Response(context, status=status.HTTP_200_OK)
+
 
 
 # update user
@@ -610,32 +642,98 @@ class UserProfileUpdateViewFrom(APIView):
 
 
 # update admin
-class SelfAdminUpdateProfile(APIView):
-    def put(self, request):
-        user_profile = models.Specialist.objects.get(user=request.user)
-        serialiser_ = serializer.AdminProfileUpdate(
-            user_profile, data=request.data)
-        if serialiser_.is_valid():
-            serialiser_.save()
-            context = {
-                "status": 200,
-                "data": serialiser_.data,
-                "error": None
-            }
-            return Response(context, status.HTTP_200_OK)
-        else:
-            context = {
-                "status": 404,
-                "data": None,
-                "error": serialiser_.errors
-            }
-            return Response(context, status.HTTP_200_OK)
+# class SelfAdminUpdateProfile(APIView):
+#     def put(self, request):
+#         user_profile = models.Specialist.objects.get(user=request.user)
+#         serialiser_ = serializer.AdminProfileUpdate(
+#             user_profile, data=request.data)
+#         if serialiser_.is_valid():
+#             serialiser_.save()
+#             context = {
+#                 "status": 200,
+#                 "data": serialiser_.data,
+#                 "error": None
+#             }
+#             return Response(context, status.HTTP_200_OK)
+#         else:
+#             context = {
+#                 "status": 404,
+#                 "data": None,
+#                 "error": serialiser_.errors
+#             }
+#             return Response(context, status.HTTP_200_OK)
 
 
 # todo: modir can edit
+
 class ModirAdminUpdateView(APIView):
-    def put(self, request):
-        pass
+    parser_classes = [MultiPartParser, FormParser]
+
+    def put(self, request, user_id):
+        # print(request.data)
+        try:
+            specialist_instance = models.Specialist.objects.get(user__id=user_id)
+        except models.Specialist.DoesNotExist:
+            return Response(
+                {"status": 404, "data": None, "error": "Specialist with the provided user ID does not exist."},
+                status=status.HTTP_200_OK
+            )
+
+        serializer_ = serializer.AdminProfileUpdate(instance=specialist_instance, data=request.data, partial=True)
+
+        if serializer_.is_valid():
+            # Save the updated data
+            serializer_.save()
+
+            # If no profile_img was provided, set it to the default image
+            if not request.data.get('profile_img'):
+                specialist_instance.profile_img = '/media/userProfile/default.png'
+                specialist_instance.save()
+
+            return Response(
+                {"status": 200, "data": serializer_.data, "error": None},
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {"status": 400, "data": None, "error": serializer_.errors},
+                status=status.HTTP_200_OK
+            )
+            
+            
+class AdminUpdateUserView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def put(self, request, user_id):
+        # print(request.data)
+        try:
+            user_instance = models.UserProfile.objects.get(user__id=user_id)
+        except models.UserProfile.DoesNotExist:
+            return Response(
+                {"status": 404, "data": None, "error": "Specialist with the provided user ID does not exist."},
+                status=status.HTTP_200_OK
+            )
+
+        serializer_ = serializer.userprofileUpdateFromSerializer(instance=user_instance, data=request.data, partial=True)
+
+        if serializer_.is_valid():
+            # Save the updated data
+            serializer_.save()
+
+            # If no profile_img was provided, set it to the default image
+            if not request.data.get('profile_img'):
+                user_instance.profile_img = '/media/userProfile/default.png'
+                user_instance.save()
+
+            return Response(
+                {"status": 200, "data": serializer_.data, "error": None},
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {"status": 400, "data": None, "error": serializer_.errors},
+                status=status.HTTP_200_OK
+            )
 
 
 class UserDeleteView(APIView):
