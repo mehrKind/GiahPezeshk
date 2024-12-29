@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -560,6 +559,31 @@ class AllUserProfilesView(APIView):
 
 class AllSpecialistView(APIView):
     def get(self, request):
+
+        try:
+            # Fetch the Specialist instance for the current user
+            all_specialist= models.Specialist.objects.all()
+        except models.Specialist.DoesNotExist:
+            context = {
+                "status": 403,
+                "data": None,
+                "error": "no item is exists."
+            }
+            return Response(context, status=status.HTTP_200_OK)
+        # Serialize the data
+        serializer_ = serializer.SpecialistProfileSerializer(all_specialist, many=True)
+
+        # Prepare the response context
+        context = {
+            "status": 200,
+            "data": serializer_.data,
+            "error": None
+        }
+        return Response(context, status=status.HTTP_200_OK)
+    
+    
+class AllSpecialistWebView(APIView):
+    def get(self, request):
         current_user = request.user
 
         try:
@@ -571,7 +595,7 @@ class AllSpecialistView(APIView):
                 "data": None,
                 "error": "Access denied. User does not have a specialist profile."
             }
-            return Response(context, status=status.HTTP_403_FORBIDDEN)
+            return Response(context, status=status.HTTP_200_OK)
 
         # Check if the current user is a "modir"
         if current_user_profile.is_modir:
@@ -670,25 +694,22 @@ class ModirAdminUpdateView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def put(self, request, user_id):
-        # print(request.data)
+        print(request.data)
         try:
             specialist_instance = models.Specialist.objects.get(user__id=user_id)
         except models.Specialist.DoesNotExist:
             return Response(
                 {"status": 404, "data": None, "error": "Specialist with the provided user ID does not exist."},
-                status=status.HTTP_200_OK
+                status=status.HTTP_404_NOT_FOUND
             )
 
-        serializer_ = serializer.AdminProfileUpdate(instance=specialist_instance, data=request.data, partial=True)
+        serializer_ = serializer.AdminProfileUpdate(
+            instance=specialist_instance, data=request.data, partial=True
+        )
 
         if serializer_.is_valid():
-            # Save the updated data
+            # Save the validated data, including profile_img if provided
             serializer_.save()
-
-            # If no profile_img was provided, set it to the default image
-            if not request.data.get('profile_img'):
-                specialist_instance.profile_img = '/media/userProfile/default.png'
-                specialist_instance.save()
 
             return Response(
                 {"status": 200, "data": serializer_.data, "error": None},
@@ -697,34 +718,89 @@ class ModirAdminUpdateView(APIView):
         else:
             return Response(
                 {"status": 400, "data": None, "error": serializer_.errors},
-                status=status.HTTP_200_OK
+                status=status.HTTP_400_BAD_REQUEST
             )
-            
-            
+
 class AdminUpdateUserView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def put(self, request, user_id):
-        # print(request.data)
+        # Debug: Print the incoming request data
+        print("Request Data:", request.data)
+
         try:
+            # Retrieve the user profile instance based on user ID
             user_instance = models.UserProfile.objects.get(user__id=user_id)
         except models.UserProfile.DoesNotExist:
             return Response(
-                {"status": 404, "data": None, "error": "Specialist with the provided user ID does not exist."},
-                status=status.HTTP_200_OK
+                {"status": 404, "data": None, "error": "UserProfile with the provided user ID does not exist."},
+                status=status.HTTP_404_NOT_FOUND
             )
 
-        serializer_ = serializer.userprofileUpdateFromSerializer(instance=user_instance, data=request.data, partial=True)
+        # Make a copy of the incoming data
+        data = request.data.copy()
+
+        # Map `profile_image` field to `profile_img` in case of image upload
+        if 'profile_image' in data:
+            data['profile_img'] = data.pop('profile_image')
+
+        # Debug: Print the modified data
+        print("Data after modification:", data)
+
+        # Serialize the data to validate and update the user profile
+        serializer_ = serializer.UserProfileUpdateFromSerializer2(
+            instance=user_instance, data=data, partial=True
+        )
 
         if serializer_.is_valid():
             # Save the updated data
             serializer_.save()
+            return Response(
+                {"status": 200, "data": serializer_.data, "error": None},
+                status=status.HTTP_200_OK
+            )
+        else:
+            # Debug: Print validation errors
+            print("Validation Errors:", serializer_.errors)
+            return Response(
+                {"status": 400, "data": None, "error": serializer_.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-            # If no profile_img was provided, set it to the default image
-            if not request.data.get('profile_img'):
-                user_instance.profile_img = '/media/userProfile/default.png'
-                user_instance.save()
+# View: Handling incoming field 'profile_image' and mapping it to 'profile_img'
+class AdminUpdateUserView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
 
+    def put(self, request, user_id):
+        # Debug the incoming request data
+        print("Request Data:", request.data)
+
+        try:
+            user_instance = models.UserProfile.objects.get(user__id=user_id)
+        except models.UserProfile.DoesNotExist:
+            return Response(
+                {
+                    "status": 404,
+                    "data": None,
+                    "error": "UserProfile with the provided user ID does not exist."
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Map the incoming data field `profile_image` to `profile_img` if needed
+        data = request.data.copy()
+
+        # Check if the incoming data contains 'profile_image' and map it to 'profile_img'
+        if 'profile_image' in data:
+            data['profile_img'] = data.pop('profile_image')
+
+        # Use the serializer to validate and update the user profile
+        serializer_ = serializer.UserProfileUpdateFromSerializer2(
+            instance=user_instance, data=data, partial=True
+        )
+
+        if serializer_.is_valid():
+            serializer_.save()  # Save the updated data
             return Response(
                 {"status": 200, "data": serializer_.data, "error": None},
                 status=status.HTTP_200_OK
@@ -732,8 +808,9 @@ class AdminUpdateUserView(APIView):
         else:
             return Response(
                 {"status": 400, "data": None, "error": serializer_.errors},
-                status=status.HTTP_200_OK
+                status=status.HTTP_400_BAD_REQUEST
             )
+
 
 
 class UserDeleteView(APIView):

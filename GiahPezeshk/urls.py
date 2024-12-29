@@ -8,6 +8,7 @@ api_version = "v1"
 urlpatterns = [
     path('admin/', admin.site.urls),
     path(f"api/{api_version}/accounts/", include("accounts.urls")),
+    path(f"api/{api_version}/settings/", include("app.urls")),
     # path(f"api/{api_version}/user/", include("user.urls"))
 ]
 
