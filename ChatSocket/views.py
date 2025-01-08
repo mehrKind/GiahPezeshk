@@ -12,6 +12,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated ,AllowAny
 import json
 from datetime import datetime,timedelta
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.conf import settings
+from rest_framework.parsers import MultiPartParser, FormParser
+
 
 
 client = MongoClient("mongodb://localhost:27017/")
@@ -129,3 +134,22 @@ class UserMessagesCount(APIView):
         # total_messages = result[0]['total_messages'] if result else 0
         return Response(list(count)[0], status=status.HTTP_200_OK)
     
+
+
+class FileUploadView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, *args, **kwargs):
+        uploaded_file = request.FILES.get('file')
+
+        if not uploaded_file:
+            return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Save the file to the media directory
+        file_path = default_storage.save(uploaded_file.name, ContentFile(uploaded_file.read()))
+
+        # Generate the full URL of the uploaded file
+        file_url = request.build_absolute_uri(settings.MEDIA_URL + file_path)
+
+        return Response({"file_url": file_url}, status=status.HTTP_201_CREATED)

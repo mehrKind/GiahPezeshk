@@ -11,4 +11,5 @@ urlpatterns = [
     path('changeadmin/', views.ChangeAdmin.as_view()),
     path('changeclose/', views.ChangeClose.as_view()),
     path('usermessagescount/<str:username>', views.UserMessagesCount.as_view()),
+    path('upload/', views.FileUploadView.as_view(), name='file-upload'),
 ]
