@@ -15,6 +15,7 @@ urlpatterns = [
     path("change_password/", views.ChangePasswordView.as_view()),
     path("all_users/", views.AllUserProfilesView.as_view(), name="all_users"),
     path("all_specialist/", views.AllSpecialistView.as_view()),
+    path("all_specialist_admin/", views.AllSpecialistWebView.as_view()),
     path("add_specialist/", views.AdminRegisterView.as_view()),
     path("update_admin/<int:user_id>/", views.ModirAdminUpdateView.as_view()),
     path("me_update/", views.UserProfileUpdateView.as_view()),

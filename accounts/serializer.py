@@ -46,7 +46,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         # If profile_img is null, return the default image URL
         if obj.profile_img:
             return obj.profile_img.url
-        return '/media/userProfile/default.png'  # Default image URL
+        return '/userProfile/default.png'  # Default image URL
 
 
 
@@ -73,23 +73,35 @@ class AdminRegisterSerializer(serializers.ModelSerializer):
         # If profile_img exists, return its URL, otherwise return the default image URL
         if obj.profile_img:
             return obj.profile_img.url
-        return '/media/userProfile/default.png'  # Default image URL
+        return '/userProfile/default.png'  # Default image URL
 
 
-        
+
 
 class AdminProfileUpdate(serializers.ModelSerializer):
     fullName = serializers.CharField(required=False)
     phoneNumber = serializers.CharField(required=False)
     email = serializers.EmailField(required=False)
     experience_years = serializers.IntegerField(required=False, allow_null=True)
-    profile_img = serializers.ImageField(required=False)
-    # profile_img = serializers.ImageField(required=False)
-
+    profile_image = serializers.ImageField(required=False)  # Change from profile_img to profile_image
 
     class Meta:
         model = models.Specialist
-        fields = ['fullName', 'phoneNumber', 'email', 'experience_years', 'profile_img']
+        fields = ['fullName', 'phoneNumber', 'email', 'experience_years', 'profile_image']
+
+    def update(self, instance, validated_data):
+        # Check if profile_image is in the validated data
+        if 'profile_image' in validated_data:
+            # Update profile_image if provided
+            instance.profile_img = validated_data['profile_image']
+        # Update other fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+
+
         
         
 # class AdminUserProfileUpdate(serializers.ModelSerializer):
@@ -120,3 +132,27 @@ class userprofileUpdateFromSerializer(serializers.ModelSerializer):
         model = models.UserProfile
         fields = ['fullName', 'gender', 'email', 'profile_img']
         
+        
+        
+class UserProfileUpdateFromSerializer2(serializers.ModelSerializer):
+    fullName = serializers.CharField(required=False)
+    phoneNumber = serializers.CharField(required=False)
+    email = serializers.EmailField(required=False)
+    profile_img = serializers.ImageField(required=False)  # Model field name for profile image
+
+    class Meta:
+        model = models.UserProfile
+        fields = ['fullName', 'phoneNumber', 'email', 'profile_img']
+
+    def update(self, instance, validated_data):
+        # Handle the profile_img update or retention
+        if 'profile_image' in validated_data:
+            instance.profile_img = validated_data['profile_image']
+        else:
+            validated_data['profile_image'] = instance.profile_img
+
+        # Update other fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
