@@ -16,6 +16,22 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
 from rest_framework.parsers import MultiPartParser, FormParser
+from bson import ObjectId
+from datetime import datetime
+from django.http import JsonResponse
+
+def serialize_mongo_data(data):
+    """Recursively convert ObjectId and datetime to str in MongoDB documents."""
+    if isinstance(data, dict):
+        return {k: serialize_mongo_data(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [serialize_mongo_data(item) for item in data]
+    elif isinstance(data, ObjectId):
+        return str(data)
+    elif isinstance(data, datetime):
+        return data.isoformat()  # Converts to "YYYY-MM-DDTHH:MM:SS.ssssss"
+    return data
+
 
 
 
@@ -61,9 +77,10 @@ class ChatUsers(APIView):
 
         )
         chats = list(chats)
-        for chat in chats:
+        serialized_chats = [serialize_mongo_data(chat) for chat in chats]
+        for chat in serialized_chats:
             chat['room_users'].remove(username)
-        return Response(chats, status=status.HTTP_200_OK)
+        return Response(serialized_chats, status=status.HTTP_200_OK)
     
 
 class ChangeAdmin(APIView):
